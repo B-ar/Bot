@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="pt-BR">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChatBot Programador</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="/_sdk/data_sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+        body {
+            box-sizing: border-box;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .chat-container {
+            height: 500px;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+        }
+        
+        .message-bubble {
+            max-width: 80%;
+            word-wrap: break-word;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .user-message {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin-left: auto;
+        }
+        
+        .bot-message {
+            background: #f3f4f6;
+            color: #374151;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .typing-indicator {
+            display: none;
+            align-items: center;
+            gap: 4px;
+            padding: 12px 16px;
+            background: #f3f4f6;
+            border-radius: 18px;
+            max-width: 80px;
+        }
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: #9ca3af;
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+        
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+        
+        .quick-reply {
+            transition: all 0.2s ease;
+        }
+        
+        .quick-reply:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .loading-spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #10b981;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+        
+        .toast.show {
+            transform: translateX(0);
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    </style>
+  <style>@view-transition { navigation: auto; }</style>
+ </head>
+ <body class="min-h-full bg-gray-50"><!-- Toast Notification -->
+  <div id="toast" class="toast"></div>
+  <main class="min-h-full"><!-- Header -->
+   <header class="gradient-bg text-white py-6 px-4">
+    <div class="max-w-4xl mx-auto">
+     <div class="flex items-center justify-between">
+      <div class="flex items-center gap-4">
+       <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+        <svg class="w-6 h-6" fill="currentColor" viewbox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+        </svg>
+       </div>
+       <div>
+        <h1 id="bot-name" class="text-2xl font-bold">AssistenteDev</h1>
+        <div class="flex items-center gap-2">
+         <div class="w-2 h-2 bg-green-400 rounded-full pulse"></div><span class="text-white/90 text-sm">Online</span>
+        </div>
+       </div>
+      </div><button id="whatsapp-contact" class="bg-green-500 hover:bg-green-600 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+       <svg class="w-5 h-5" fill="currentColor" viewbox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893A11.821 11.821 0 0020.465 3.516" />
+       </svg> Contratar Serviços </button>
+     </div>
+    </div>
+   </header><!-- Chat Container -->
+   <section class="py-6 px-4">
+    <div class="max-w-4xl mx-auto">
+     <div class="bg-white rounded-lg shadow-lg overflow-hidden"><!-- Chat Messages -->
+      <div id="chat-container" class="chat-container p-4 space-y-4"><!-- Messages will be dynamically added here -->
+      </div><!-- Typing Indicator -->
+      <div id="typing-indicator" class="typing-indicator p-4">
+       <div class="typing-dot"></div>
+       <div class="typing-dot"></div>
+       <div class="typing-dot"></div>
+      </div><!-- Quick Replies -->
+      <div id="quick-replies" class="p-4 border-t bg-gray-50">
+       <p class="text-sm text-gray-600 mb-3">Perguntas frequentes:</p>
+       <div class="flex flex-wrap gap-2"><button class="quick-reply bg-white hover:bg-blue-50 border border-gray-200 px-3 py-2 rounded-full text-sm" data-message="Quais serviços você oferece?"> 💼 Serviços </button> <button class="quick-reply bg-white hover:bg-blue-50 border border-gray-200 px-3 py-2 rounded-full text-sm" data-message="Qual o preço dos seus serviços?"> 💰 Preços </button> <button class="quick-reply bg-white hover:bg-blue-50 border border-gray-200 px-3 py-2 rounded-full text-sm" data-message="Quanto tempo leva para desenvolver?"> ⏰ Prazo </button> <button class="quick-reply bg-white hover:bg-blue-50 border border-gray-200 px-3 py-2 rounded-full text-sm" data-message="Você faz manutenção?"> 🔧 Manutenção </button> <button class="quick-reply bg-white hover:bg-blue-50 border border-gray-200 px-3 py-2 rounded-full text-sm" data-message="Como posso contratar?"> 📞 Contato </button>
+       </div>
+      </div><!-- Message Input -->
+      <div class="p-4 border-t">
+       <form id="message-form" class="flex gap-2"><input type="text" id="message-input" placeholder="Digite sua mensagem..." class="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" maxlength="500"> <button type="submit" id="send-button" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"> Enviar </button>
+       </form>
+      </div>
+     </div>
+    </div>
+   </section><!-- Features Section -->
+   <section class="py-8 px-4 bg-white">
+    <div class="max-w-4xl mx-auto text-center">
+     <h2 class="text-2xl font-bold text-gray-800 mb-4">Serviços de Programação</h2>
+     <p id="service-description" class="text-gray-600 mb-6">Desenvolvimento de sites, aplicativos e sistemas personalizados com as melhores tecnologias do mercado.</p>
+     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="p-6 border rounded-lg">
+       <div class="text-3xl mb-3">
+        🌐
+       </div>
+       <h3 class="font-semibold mb-2">Sites &amp; E-commerce</h3>
+       <p class="text-sm text-gray-600">Sites responsivos e lojas virtuais modernas</p>
+      </div>
+      <div class="p-6 border rounded-lg">
+       <div class="text-3xl mb-3">
+        📱
+       </div>
+       <h3 class="font-semibold mb-2">Aplicativos</h3>
+       <p class="text-sm text-gray-600">Apps para Android e iOS</p>
+      </div>
+      <div class="p-6 border rounded-lg">
+       <div class="text-3xl mb-3">
+        ⚙️
+       </div>
+       <h3 class="font-semibold mb-2">Sistemas</h3>
+       <p class="text-sm text-gray-600">Sistemas personalizados para sua empresa</p>
+      </div>
+     </div>
+    </div>
+   </section>
+  </main><!-- Footer -->
+  <footer class="bg-gray-800 text-white py-6 px-4">
+   <div class="max-w-4xl mx-auto text-center">
+    <p id="footer-text" class="mb-2">© 2024 - Todos os direitos reservados</p><button id="copy-footer" class="text-blue-400 hover:text-blue-300 text-sm"> 📋 Copiar direitos autorais </button>
+   </div>
+  </footer>
+  <script>
+        const defaultConfig = {
+            bot_name: "AssistenteDev",
+            welcome_message: "Olá! 👋 Sou seu assistente virtual especializado em programação. Como posso ajudá-lo hoje?",
+            whatsapp_number: "91991572654",
+            service_description: "Desenvolvimento de sites, aplicativos e sistemas personalizados com as melhores tecnologias do mercado.",
+            footer_text: "© 2024 - Todos os direitos reservados"
+        };
+
+        let messages = [];
+        let currentRecordCount = 0;
+        let isTyping = false;
+
+        // Respostas automáticas do bot
+        const botResponses = {
+            "serviços": "🚀 Ofereço desenvolvimento de:\n\n• Sites responsivos e modernos\n• E-commerce completo\n• Aplicativos mobile (Android/iOS)\n• Sistemas web personalizados\n• APIs e integrações\n• Manutenção e suporte\n\nQual tipo de projeto você tem em mente?",
+            
+            "preço": "💰 Os valores variam conforme a complexidade:\n\n• Landing Page: R$ 800 - R$ 1.500\n• Site institucional: R$ 1.500 - R$ 3.000\n• E-commerce: R$ 3.000 - R$ 8.000\n• App mobile: R$ 5.000 - R$ 15.000\n• Sistema web: R$ 8.000 - R$ 25.000\n\nPosso fazer um orçamento personalizado! Me conte sobre seu projeto.",
+            
+            "prazo": "⏰ Os prazos dependem do projeto:\n\n• Landing Page: 3-7 dias\n• Site institucional: 1-2 semanas\n• E-commerce: 2-4 semanas\n• App mobile: 1-3 meses\n• Sistema complexo: 2-6 meses\n\nSempre entrego antes do prazo combinado!",
+            
+            "manutenção": "🔧 Sim! Ofereço pacotes de manutenção:\n\n• Atualizações de segurança\n• Backup automático\n• Monitoramento 24/7\n• Correções de bugs\n• Melhorias e novas funcionalidades\n\nA partir de R$ 200/mês. Quer saber mais?",
+            
+            "contato": "📞 Para contratar meus serviços:\n\n1. Clique no botão 'Contratar Serviços' acima\n2. Me envie uma mensagem no WhatsApp\n3. Conte sobre seu projeto\n4. Receba um orçamento gratuito!\n\nEstou sempre disponível para tirar suas dúvidas! 😊",
+            
+            "default": "🤖 Entendi! Sou especializado em desenvolvimento de software. Posso ajudar com:\n\n• Informações sobre serviços\n• Orçamentos personalizados\n• Dúvidas técnicas\n• Prazos e valores\n\nO que gostaria de saber especificamente?"
+        };
+
+        // Data handler for SDK
+        const dataHandler = {
+            onDataChanged(data) {
+                currentRecordCount = data.length;
+                // Update messages if needed
+                const chatMessages = data.filter(msg => msg.type === 'chat');
+                if (chatMessages.length !== messages.length) {
+                    messages = chatMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                    renderMessages();
+                }
+            }
+        };
+
+        async function render(config) {
+            document.getElementById('bot-name').textContent = config.bot_name || defaultConfig.bot_name;
+            document.getElementById('service-description').textContent = config.service_description || defaultConfig.service_description;
+            document.getElementById('footer-text').textContent = config.footer_text || defaultConfig.footer_text;
+        }
+
+        function mapToCapabilities(config) {
+            return {
+                recolorables: [
+                    {
+                        get: () => config.primary_color || "#667eea",
+                        set: (value) => {
+                            config.primary_color = value;
+                            if (window.elementSdk) {
+                                window.elementSdk.setConfig({ primary_color: value });
+                            }
+                        }
+                    },
+                    {
+                        get: () => config.secondary_color || "#764ba2",
+                        set: (value) => {
+                            config.secondary_color = value;
+                            if (window.elementSdk) {
+                                window.elementSdk.setConfig({ secondary_color: value });
+                            }
+                        }
+                    }
+                ],
+                borderables: [],
+                fontEditable: {
+                    get: () => config.font_family || "Inter",
+                    set: (value) => {
+                        config.font_family = value;
+                        if (window.elementSdk) {
+                            window.elementSdk.setConfig({ font_family: value });
+                        }
+                    }
+                },
+                fontSizeable: {
+                    get: () => config.font_size || 16,
+                    set: (value) => {
+                        config.font_size = value;
+                        if (window.elementSdk) {
+                            window.elementSdk.setConfig({ font_size: value });
+                        }
+                    }
+                }
+            };
+        }
+
+        function mapToEditPanelValues(config) {
+            return new Map([
+                ["bot_name", config.bot_name || defaultConfig.bot_name],
+                ["welcome_message", config.welcome_message || defaultConfig.welcome_message],
+                ["whatsapp_number", config.whatsapp_number || defaultConfig.whatsapp_number],
+                ["service_description", config.service_description || defaultConfig.service_description],
+                ["footer_text", config.footer_text || defaultConfig.footer_text]
+            ]);
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type === 'error' ? 'bg-red-500' : 'bg-green-500'} show`;
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function showLoading(button) {
+            const originalText = button.textContent;
+            button.innerHTML = '<div class="loading-spinner"></div>';
+            button.disabled = true;
+            return originalText;
+        }
+
+        function hideLoading(button, originalText) {
+            button.textContent = originalText;
+            button.disabled = false;
+        }
+
+        async function addMessage(message, sender, type = 'chat') {
+            if (currentRecordCount >= 999) {
+                showToast('Limite máximo de mensagens atingido!', 'error');
+                return false;
+            }
+
+            try {
+                const messageData = {
+                    id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    message: message,
+                    sender: sender,
+                    timestamp: new Date().toISOString(),
+                    type: type
+                };
+
+                if (window.dataSdk) {
+                    const result = await window.dataSdk.create(messageData);
+                    if (result.isOk) {
+                        messages.push(messageData);
+                        renderMessages();
+                        return true;
+                    } else {
+                        showToast('Erro ao enviar mensagem', 'error');
+                        return false;
+                    }
+                } else {
+                    messages.push(messageData);
+                    renderMessages();
+                    return true;
+                }
+            } catch (error) {
+                showToast('Erro ao enviar mensagem', 'error');
+                return false;
+            }
+        }
+
+        function renderMessages() {
+            const container = document.getElementById('chat-container');
+            container.innerHTML = '';
+
+            messages.forEach(msg => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`;
+                
+                const bubble = document.createElement('div');
+                bubble.className = `message-bubble p-3 rounded-lg ${msg.sender === 'user' ? 'user-message text-white' : 'bot-message'}`;
+                
+                // Format message with line breaks
+                const formattedMessage = msg.message.replace(/\n/g, '<br>');
+                bubble.innerHTML = formattedMessage;
+                
+                messageDiv.appendChild(bubble);
+                container.appendChild(messageDiv);
+            });
+
+            // Scroll to bottom
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function getBotResponse(userMessage) {
+            const message = userMessage.toLowerCase();
+            
+            if (message.includes('serviço') || message.includes('trabalho') || message.includes('desenvolv')) {
+                return botResponses.serviços;
+            } else if (message.includes('preço') || message.includes('valor') || message.includes('custo') || message.includes('quanto')) {
+                return botResponses.preço;
+            } else if (message.includes('prazo') || message.includes('tempo') || message.includes('demora')) {
+                return botResponses.prazo;
+            } else if (message.includes('manutenção') || message.includes('suporte') || message.includes('manter')) {
+                return botResponses.manutenção;
+            } else if (message.includes('contato') || message.includes('contratar') || message.includes('whatsapp')) {
+                return botResponses.contato;
+            } else if (message.includes('olá') || message.includes('oi') || message.includes('bom dia') || message.includes('boa tarde') || message.includes('boa noite')) {
+                const welcomeMsg = window.elementSdk ? 
+                    (window.elementSdk.config.welcome_message || defaultConfig.welcome_message) : 
+                    defaultConfig.welcome_message;
+                return welcomeMsg;
+            } else {
+                return botResponses.default;
+            }
+        }
+
+        async function showTypingIndicator() {
+            if (isTyping) return;
+            
+            isTyping = true;
+            const indicator = document.getElementById('typing-indicator');
+            indicator.style.display = 'flex';
+            
+            // Scroll to show typing indicator
+            const container = document.getElementById('chat-container');
+            setTimeout(() => {
+                container.scrollTop = container.scrollHeight + 100;
+            }, 100);
+        }
+
+        function hideTypingIndicator() {
+            isTyping = false;
+            const indicator = document.getElementById('typing-indicator');
+            indicator.style.display = 'none';
+        }
+
+        async function sendMessage(message, isQuickReply = false) {
+            if (!message.trim()) return;
+
+            const sendButton = document.getElementById('send-button');
+            let originalText = '';
+            
+            if (!isQuickReply) {
+                originalText = showLoading(sendButton);
+            }
+
+            try {
+                // Add user message
+                const success = await addMessage(message, 'user');
+                if (!success) return;
+
+                // Clear input
+                if (!isQuickReply) {
+                    document.getElementById('message-input').value = '';
+                }
+
+                // Show typing indicator
+                await showTypingIndicator();
+
+                // Simulate bot thinking time
+                await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+
+                // Hide typing indicator
+                hideTypingIndicator();
+
+                // Get and send bot response
+                const botResponse = getBotResponse(message);
+                await addMessage(botResponse, 'bot');
+
+            } catch (error) {
+                showToast('Erro ao processar mensagem', 'error');
+            } finally {
+                if (!isQuickReply) {
+                    hideLoading(sendButton, originalText);
+                }
+            }
+        }
+
+        function setupEventListeners() {
+            // Message form
+            document.getElementById('message-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const input = document.getElementById('message-input');
+                const message = input.value.trim();
+                if (message) {
+                    await sendMessage(message);
+                }
+            });
+
+            // Quick replies
+            document.querySelectorAll('.quick-reply').forEach(button => {
+                button.addEventListener('click', async (e) => {
+                    const message = e.target.dataset.message;
+                    await sendMessage(message, true);
+                });
+            });
+
+            // WhatsApp contact
+            document.getElementById('whatsapp-contact').addEventListener('click', () => {
+                const number = window.elementSdk ? 
+                    (window.elementSdk.config.whatsapp_number || defaultConfig.whatsapp_number) : 
+                    defaultConfig.whatsapp_number;
+                const message = encodeURIComponent('Olá! Vi seu chatbot e gostaria de contratar seus serviços de programação. Podemos conversar?');
+                window.open(`https://wa.me/55${number}?text=${message}`, '_blank', 'noopener,noreferrer');
+            });
+
+            // Copy footer
+            document.getElementById('copy-footer').addEventListener('click', async () => {
+                const footerText = window.elementSdk ? 
+                    (window.elementSdk.config.footer_text || defaultConfig.footer_text) : 
+                    defaultConfig.footer_text;
+                
+                try {
+                    await navigator.clipboard.writeText(footerText);
+                    showToast('Texto copiado para a área de transferência!');
+                } catch (error) {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = footerText;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    showToast('Texto copiado para a área de transferência!');
+                }
+            });
+
+            // Enter key in input
+            document.getElementById('message-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    document.getElementById('message-form').dispatchEvent(new Event('submit'));
+                }
+            });
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            setupEventListeners();
+
+            // Initialize Data SDK
+            if (window.dataSdk) {
+                const initResult = await window.dataSdk.init(dataHandler);
+                if (!initResult.isOk) {
+                    console.error("Failed to initialize data SDK");
+                }
+            }
+
+            // Initialize Element SDK
+            if (window.elementSdk) {
+                window.elementSdk.init({
+                    defaultConfig,
+                    render,
+                    mapToCapabilities,
+                    mapToEditPanelValues
+                });
+            }
+
+            // Send welcome message if no messages exist
+            setTimeout(async () => {
+                if (messages.length === 0) {
+                    const welcomeMsg = window.elementSdk ? 
+                        (window.elementSdk.config.welcome_message || defaultConfig.welcome_message) : 
+                        defaultConfig.welcome_message;
+                    await addMessage(welcomeMsg, 'bot');
+                }
+            }, 1000);
+        });
+    </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9924f68cd5fdc618',t:'MTc2MTA5MzgzMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
